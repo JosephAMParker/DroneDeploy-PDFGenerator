@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Annotation Report</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <div class="row main">
+    <a id="generate-button">
+        <img class="icon" src="icon.png">
+
+      <div class="col-75">
+        Generate a pdf of the currently viewed map. 
+      </div>
+    </a>
+
+  </div>
+  <div class ="row ">
+    <label for="slider">Zoom Level</label>
+    <output for="slider" id="zoom">18</output>
+    <input id="slider" type ="range" min ="17" max="21" step ="1" value ="18" oninput="updateZoom(value)"/>
+  </div>
+
+  <div class ="row ">
+    <p id="msg"></p>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.3.2/jspdf.debug.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/2.1.0/jspdf.plugin.autotable.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
+

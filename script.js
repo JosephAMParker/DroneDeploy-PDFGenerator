@@ -1,34 +1,34 @@
  
-var generateButton = document.querySelector('#generate-button');
-var zoom_level = 18
+var generateButton = document.querySelector("#generate-button");
+var zoom_level = 18;
 
 function updateZoom(value) {
-  document.querySelector('#zoom').value = value;
+  document.querySelector("#zoom").value = value;
   zoom_level = parseInt(value);
 
   if (value >= 20){
-    document.querySelector('#msg').innerHTML = "Using too a high zoom level could mean long load times.";
-    document.querySelector('#msg').style = "color:red;";
+    document.querySelector("#msg").innerHTML = "Using too a high zoom level could mean long load times.";
+    document.querySelector("#msg").style = "color:red;";
   }
 
   else{
-    document.querySelector('#msg').innerHTML = "";
-    document.querySelector('#msg').style = "";
+    document.querySelector("#msg").innerHTML = "";
+    document.querySelector("#msg").style = "";
   }
 }
 
 function dronedeployApiReady(){
   return new Promise((resolve) => {
     window.dronedeploy.onload(() => {
-       generateButton.addEventListener('click', generatePDFListener);
+       generateButton.addEventListener("click", generatePDFListener);
     });
   });
 }
 
 function generatePDFListener(){
 
-  document.querySelector('#msg').innerHTML = "Generating...";
-  document.querySelector('#msg').style = "";
+  document.querySelector("#msg").innerHTML = "Generating...";
+  document.querySelector("#msg").style = "";
 
   getCurrentlyViewedPlan().then(function(plan) {
     getTileDataFromPlan(plan).then(function(tileResponse) {
@@ -40,25 +40,25 @@ function generatePDFListener(){
 
           });
         }).catch(function(e) {    
-          document.querySelector('#msg').innerHTML = "Error contacting server. Check console for error.";
-          document.querySelector('#msg').style = "color:red;";
+          document.querySelector("#msg").innerHTML = "Error contacting server. Check console for error.";
+          document.querySelector("#msg").style = "color:red;";
           throw e;});
       }).catch(function(e) {     
-          document.querySelector('#msg').innerHTML = "Error getting Annotations. Check console for error.";
-          document.querySelector('#msg').style = "color:red;";
+          document.querySelector("#msg").innerHTML = "Error getting Annotations. Check console for error.";
+          document.querySelector("#msg").style = "color:red;";
           throw e;});
     }).catch(function(e) {     
-          document.querySelector('#msg').innerHTML = "Error getting Tiles. Check console for error.";
-          document.querySelector('#msg').style = "color:red;";
+          document.querySelector("#msg").innerHTML = "Error getting Tiles. Check console for error.";
+          document.querySelector("#msg").style = "color:red;";
           throw e;});
   }).catch(function(e) {     
-          document.querySelector('#msg').innerHTML = "Error getting Plan. Check console for error.";
-          document.querySelector('#msg').style = "color:red;";
+          document.querySelector("#msg").innerHTML = "Error getting Plan. Check console for error.";
+          document.querySelector("#msg").style = "color:red;";
           throw e;});
 }
 
 function getCurrentlyViewedPlan(){
-  return window.dronedeploy.Plans.getCurrentlyViewed()
+  return window.dronedeploy.Plans.getCurrentlyViewed();
 }
 
 function getTileDataFromPlan(plan){
@@ -66,7 +66,7 @@ function getTileDataFromPlan(plan){
 }
 
 function getAnnotations(plan){
-  return window.dronedeploy.Annotations.get(plan.id)
+  return window.dronedeploy.Annotations.get(plan.id);
 }
 
 function sendTilesToServer(planGeo,tileResponse, annotations){
@@ -75,13 +75,13 @@ function sendTilesToServer(planGeo,tileResponse, annotations){
     tiles: tileResponse.tiles,
     planGeo: planGeo,
     zoom_level: zoom_level,
-    annotations: annotations,
+    annotations: annotations
   };
 
 
   JSON.stringify(body);
-  return fetch('https://dronedeploy-pdf-generator.herokuapp.com/', {
-    method: 'POST',
+  return fetch("https://dronedeploy-pdf-generator.herokuapp.com/", {
+    method: "POST",
     body: JSON.stringify(body)
   });
 }
@@ -96,22 +96,23 @@ function generatePDF(plan, imageData, annotations){
   var reader = new FileReader();
   
   reader.addEventListener("loadend", function() {
-    var doc = new jsPDF('p','pt')
-
-    //2.83456: mm to pt. Using doc.autoTable requires jsPDF in pt form, cannot currently use mm or cm. 
-    doc.text(plan.name, 15*2.83465, 30) 
 
     try{
       out=JSON.parse(reader.result);
-    } catch(e){ console.log(e);
-      document.querySelector('#msg').innerHTML = "Received Error from server. Check console for error.";
-      document.querySelector('#msg').style = "color:red;"; throw e;
+    } catch(e){ 
+      document.querySelector("#msg").innerHTML = "Received Error from server. Check console for error.";
+      document.querySelector("#msg").style = "color:red;";
+      throw e;
     }
-    
-    doc.addImage(out.image, 'JPEG', 15*2.83465, 40, 180*2.83465, out.new_height*0.283465)
 
+    //2.83456: mm to pt. Using doc.autoTable requires jsPDF in pt form, cannot currently use mm or cm. 
+    mm2pt = 2.83456;
+    width = 180*mm2pt;
+    left_margin = 15*mm2pt;
+
+    //create columns and rows for annotation table
     var columns = ["ID", "Distance", "Area", "Volume"];
-    var rows = []
+    var rows = [];
     for (a in annotations){
       annotation = annotations[a];
 
@@ -132,18 +133,21 @@ function generatePDF(plan, imageData, annotations){
       rows.push(row);
     }
 
-    doc.autoTable(columns, rows, {startY:out.new_height*0.283456+40+10});
-    doc.save(plan.name + '.pdf')
+    var doc = new jsPDF("p","pt");
+    doc.text(plan.name, left_margin, 30);
+    doc.addImage(out.image, "JPEG", left_margin, 40, width, out.new_height*mm2pt/10);
+    doc.autoTable(columns, rows, {startY:out.new_height*mm2pt/10+40+10, tableWidth:width, margin:{left:left_margin}});
+    doc.save(plan.name + ".pdf");
 
-    document.querySelector('#msg').innerHTML = "Finished";
-    document.querySelector('#msg').style = "";
+    document.querySelector("#msg").innerHTML = "Finished";
+    document.querySelector("#msg").style = "";
   });
 
-  reader.readAsBinaryString(imageData)
+  reader.readAsBinaryString(imageData);
 
 }
 
-dronedeployApiReady()
+dronedeployApiReady();
   
  
  

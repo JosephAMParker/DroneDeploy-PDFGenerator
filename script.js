@@ -42,7 +42,7 @@ function generatePDFListener(){
     .then(annotations  => sendTilesToServer(plan.geometry,tileResponse,annotations) .catch(e => reportError(e,"Error contacting server."))
     .then(response     => getResponseBlob(response)              .catch(e => reportError(e,"Error reading response from server."))
     .then(responseBlob => readResponseBlob(responseBlob)         .catch(e => reportError(e,"Error reading response from server."))
-    .then(reader       => generatePDF(plan, reader, annotations) .catch(e => reportError(e,"Error generating PDF."))
+    .then(reader       => generatePDF(plan, reader, annotations)  
   ))))))
 
 }

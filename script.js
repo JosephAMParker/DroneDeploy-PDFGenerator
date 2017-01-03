@@ -25,36 +25,26 @@ function dronedeployApiReady(){
   });
 }
 
+function reportError(e,msg){
+  document.querySelector("#msg").innerHTML = msg + " Check console for error.";
+  document.querySelector("#msg").style = "color:red;";
+  throw new Error(e);
+}
+
 function generatePDFListener(){
 
   document.querySelector("#msg").innerHTML = "Generating...";
   document.querySelector("#msg").style = "";
 
-  getCurrentlyViewedPlan().then(function(plan) {
-    getTileDataFromPlan(plan).then(function(tileResponse) {
-      getAnnotations(plan).then(function(annotations){
-        sendTilesToServer(plan.geometry,tileResponse,annotations).then(function(response) {
-          readResponse(response).then(function(imageData){
+  getCurrentlyViewedPlan()                                       .catch(e => reportError(e,"Error getting Plan."))
+    .then(plan         => getTileDataFromPlan(plan)              .catch(e => reportError(e,"Error getting Tiles."))
+    .then(tileResponse => getAnnotations(plan)                   .catch(e => reportError(e,"Error getting Annotations."))
+    .then(annotations  => sendTilesToServer(plan.geometry,tileResponse,annotations) .catch(e => reportError(e,"Error contacting server."))
+    .then(response     => getResponseBlob(response)              .catch(e => reportError(e,"Error reading response from server."))
+    .then(responseBlob => readResponseBlob(responseBlob)         .catch(e => reportError(e,"Error reading response from server."))
+    .then(reader       => generatePDF(plan, reader, annotations) .catch(e => reportError(e,"Error generating PDF."))
+  ))))))
 
-            generatePDF(plan,imageData, annotations);
-
-          });
-        }).catch(function(e) {    
-          document.querySelector("#msg").innerHTML = "Error contacting server. Check console for error.";
-          document.querySelector("#msg").style = "color:red;";
-          throw e;});
-      }).catch(function(e) {     
-          document.querySelector("#msg").innerHTML = "Error getting Annotations. Check console for error.";
-          document.querySelector("#msg").style = "color:red;";
-          throw e;});
-    }).catch(function(e) {     
-          document.querySelector("#msg").innerHTML = "Error getting Tiles. Check console for error.";
-          document.querySelector("#msg").style = "color:red;";
-          throw e;});
-  }).catch(function(e) {     
-          document.querySelector("#msg").innerHTML = "Error getting Plan. Check console for error.";
-          document.querySelector("#msg").style = "color:red;";
-          throw e;});
 }
 
 function getCurrentlyViewedPlan(){
@@ -86,64 +76,62 @@ function sendTilesToServer(planGeo,tileResponse, annotations){
   });
 }
 
-function readResponse(response){
+function getResponseBlob(response){
   return response.blob();
 }
 
-function generatePDF(plan, imageData, annotations){
+function readResponseBlob(responseBlob){
 
- 
-  var reader = new FileReader();
-  
-  reader.addEventListener("loadend", function() {
+  return new Promise((resolve) => {
 
-    try{
-      out=JSON.parse(reader.result);
-    } catch(e){ 
-      document.querySelector("#msg").innerHTML = "Received Error from server. Check console for error.";
-      document.querySelector("#msg").style = "color:red;";
-      throw e;
-    }
+    var reader = new FileReader();
+    reader.onloadend = () => resolve(reader);
+    reader.readAsBinaryString(responseBlob);
 
-    //2.83456: mm to pt. Using doc.autoTable requires jsPDF in pt form, cannot currently use mm or cm. 
-    mm2pt = 2.83456;
-    width = 180*mm2pt;
-    left_margin = 15*mm2pt;
-
-    //create columns and rows for annotation table
-    var columns = ["ID", "Distance", "Area", "Volume"];
-    var rows = [];
-    for (a in annotations){
-      annotation = annotations[a];
-
-      var chr = String.fromCharCode(65 + parseInt(a));
-
-      if (annotation.annotationType == "LINE")
-        var row = [chr, annotation.info.geometry[0].value + " m" , "-", "-"];
-      
-      else if (annotation.annotationType == "AREA")
-        var row = [chr, "-", annotation.info.geometry[0].value + " m^2", "-"];
-
-      else if (annotation.annotationType == "VOLUME")
-        var row = [chr, "-", "-", annotation.info.geometry[0].value + " m^3"];
-
-      else
-        var row = [chr, "-", "-", "-"];
-
-      rows.push(row);
-    }
-
-    var doc = new jsPDF("p","pt");
-    doc.text(plan.name, left_margin, 30);
-    doc.addImage(out.image, "JPEG", left_margin, 40, width, out.new_height*mm2pt/10);
-    doc.autoTable(columns, rows, {startY:out.new_height*mm2pt/10+40+10, tableWidth:width, margin:{left:left_margin}});
-    doc.save(plan.name + ".pdf");
-
-    document.querySelector("#msg").innerHTML = "Finished";
-    document.querySelector("#msg").style = "";
   });
+}
 
-  reader.readAsBinaryString(imageData);
+function generatePDF(plan, reader, annotations){
+
+  responseJSON = JSON.parse(reader.result);
+
+  //2.83456: mm to pt. Using doc.autoTable requires jsPDF in pt form,
+  // cannot currently use mm or cm. 
+  mm2pt = 2.83456;
+  width = 180*mm2pt;
+  left_margin = 15*mm2pt;
+
+  //create columns and rows for annotation table
+  var columns = ["ID", "Distance", "Area", "Volume"];
+  var rows = [];
+  for (a in annotations){
+    annotation = annotations[a];
+
+    var chr = String.fromCharCode(65 + parseInt(a));
+
+    if (annotation.annotationType == "LINE")
+      var row = [chr, annotation.info.geometry[0].value + " m" , "-", "-"];
+    
+    else if (annotation.annotationType == "AREA")
+      var row = [chr, "-", annotation.info.geometry[0].value + " m^2", "-"];
+
+    else if (annotation.annotationType == "VOLUME")
+      var row = [chr, "-", "-", annotation.info.geometry[0].value + " m^3"];
+
+    else
+      var row = [chr, "-", "-", "-"];
+
+    rows.push(row);
+  }
+
+  var doc = new jsPDF("p","pt");
+  doc.text(plan.name, left_margin, 30);
+  doc.addImage(responseJSON.image, "JPEG", left_margin, 40, width, responseJSON.new_height*mm2pt/10);
+  doc.autoTable(columns, rows, {startY:responseJSON.new_height*mm2pt/10+40+10, tableWidth:width, margin:{left:left_margin}});
+  doc.save(plan.name + ".pdf");
+
+  document.querySelector("#msg").innerHTML = "Finished";
+  document.querySelector("#msg").style = "";
 
 }
 

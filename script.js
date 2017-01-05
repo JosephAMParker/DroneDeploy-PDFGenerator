@@ -71,6 +71,7 @@ function sendTilesToServer(planGeo,tileResponse, annotations){
 
   JSON.stringify(body);
   return fetch("https://dronedeploy-pdf-generator.herokuapp.com/", {
+  //return fetch("http://127.0.0.1:5000/", {
     method: "POST",
     body: JSON.stringify(body)
   });
@@ -92,14 +93,14 @@ function readResponseBlob(responseBlob){
 }
 
 function generatePDF(plan, reader, annotations){
-
+  console.log(plan)
   responseJSON = JSON.parse(reader.result);
 
   //2.83456: mm to pt. Using doc.autoTable requires jsPDF in pt form,
   // cannot currently use mm or cm. 
   mm2pt = 2.83456;
-  width = 180*mm2pt;
-  left_margin = 15*mm2pt;
+  width = responseJSON.new_width*mm2pt/10
+  left_margin = (180*mm2pt - width)/2 + 15*mm2pt
 
   //create columns and rows for annotation table
   var columns = ["ID", "Distance", "Area", "Volume"];
@@ -127,7 +128,7 @@ function generatePDF(plan, reader, annotations){
   var doc = new jsPDF("p","pt");
   doc.text(plan.name, left_margin, 30);
   doc.addImage(responseJSON.image, "JPEG", left_margin, 40, width, responseJSON.new_height*mm2pt/10);
-  doc.autoTable(columns, rows, {startY:responseJSON.new_height*mm2pt/10+40+10, tableWidth:width, margin:{left:left_margin}});
+  doc.autoTable(columns, rows, {startY:responseJSON.new_height*mm2pt/10+40+10, tableWidth:180*mm2pt, margin:{left:15*mm2pt}});
   doc.save(plan.name + ".pdf");
 
   document.querySelector("#msg").innerHTML = "Finished";

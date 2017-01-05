@@ -71,7 +71,6 @@ function sendTilesToServer(planGeo,tileResponse, annotations){
 
   JSON.stringify(body);
   return fetch("https://dronedeploy-pdf-generator.herokuapp.com/", {
-  //return fetch("http://127.0.0.1:5000/", {
     method: "POST",
     body: JSON.stringify(body)
   });
@@ -93,7 +92,7 @@ function readResponseBlob(responseBlob){
 }
 
 function generatePDF(plan, reader, annotations){
-  console.log(plan)
+ 
   responseJSON = JSON.parse(reader.result);
 
   //2.83456: mm to pt. Using doc.autoTable requires jsPDF in pt form,
